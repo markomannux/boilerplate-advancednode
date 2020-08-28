@@ -7,6 +7,7 @@ const express = require("express");
 const fccTesting = require("./freeCodeCamp/fcctesting.js");
 const mongo = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectId;
+const LocalStrategy = require('passport-local');
 
 const app = express();
 
@@ -32,7 +33,7 @@ app.route("/").get((req, res) => {
   });
 });
 
-mongo.connect(process.env.DATABASE, (err, db) => {
+mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, db) => {
   if (err) {
     console.log('Database error: ' + err);
   } else {
@@ -47,6 +48,17 @@ mongo.connect(process.env.DATABASE, (err, db) => {
         }
       );
     })
+    passport.use(new LocalStrategy(
+      function(username, password, done) {
+        db.collection('users').findOne({username: username}, function(err, user) {
+          console.log('User ' + username + ' attempted to log in.');
+          if (err) { return done(err);}
+          if (!user) { return done(null, false);}
+          if (password !== user.password) { return done(null, false);}
+          return done(null, user);
+        });
+      }
+    ))
     
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
