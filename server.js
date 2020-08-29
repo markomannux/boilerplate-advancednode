@@ -48,7 +48,7 @@ app.route('/login').post(
   });
 
 app.route('/profile').get(ensureAuthenticated, (req, res) => {
-  res.render(req.user.username);
+  res.render('pug/profile', {username:req.user.username});
 })
 
 mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) => {
