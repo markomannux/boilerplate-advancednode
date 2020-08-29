@@ -29,11 +29,22 @@ app.route("/").get((req, res) => {
   res.render('pug/index',
   {
     title: 'Hello',
-    message: 'Please login'
+    message: 'Please login',
+    showLogin: true
   });
 });
 
-mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, db) => {
+app.route('/login').post(
+  passport.authenticate('local', {failureRedirect: '/'}),
+  (req, res) => {
+    res.redirect('/profile');
+  });
+
+app.route('/profile').get((req, res) => {
+  res.render('put/profile');
+})
+
+mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) => {
   if (err) {
     console.log('Database error: ' + err);
   } else {
@@ -41,7 +52,7 @@ mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, db) => {
       done(null, user._id);
     })
     passport.deserializeUser((id, done) => {
-      db.collection('users').findOne(
+      client.db().collection('users').findOne(
       {_id: new ObjectID(id)},
         (err, doc) => {
           done(null, doc);
@@ -50,7 +61,7 @@ mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, db) => {
     })
     passport.use(new LocalStrategy(
       function(username, password, done) {
-        db.collection('users').findOne({username: username}, function(err, user) {
+        client.db().collection('users').findOne({username: username}, function(err, user) {
           console.log('User ' + username + ' attempted to log in.');
           if (err) { return done(err);}
           if (!user) { return done(null, false);}
