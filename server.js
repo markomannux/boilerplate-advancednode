@@ -29,7 +29,7 @@ function ensureAuthenticated(req, res, next) {
     return next();
   }
   res.redirect('/');
-}
+};
 
 app.route("/").get((req, res) => {
   //Change the response to render the Pug template
