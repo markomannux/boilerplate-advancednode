@@ -24,6 +24,13 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
+function ensureAuthenticated(req, res, next) {
+  if (req.isAuthenticated()) {
+    return next();
+  }
+  res.redirect('/');
+}
+
 app.route("/").get((req, res) => {
   //Change the response to render the Pug template
   res.render('pug/index',
@@ -40,7 +47,7 @@ app.route('/login').post(
     res.redirect('/profile');
   });
 
-app.route('/profile').get((req, res) => {
+app.route('/profile').get(ensureAuthenticated, (req, res) => {
   res.render('put/profile');
 })
 
