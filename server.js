@@ -37,7 +37,8 @@ app.route("/").get((req, res) => {
   {
     title: 'Hello',
     message: 'Please login',
-    showLogin: true
+    showLogin: true,
+    showRegistration: true
   });
 });
 
@@ -55,12 +56,6 @@ app.route('/logout')
   .get((req, res) => {
     req.logout();
     res.redirect('/')
-})
-
-app.use((req, res, next) => {
-  res.status(404)
-  .type('text')
-  .send('Not Found')
 })
 
 mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) => {
@@ -89,6 +84,40 @@ mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) 
         });
       }
     ))
+
+    app.route('/register').post(
+      (req, res, next) => {
+        client.db().collection('users').findOne({username:req.body.username}, (err, user) => {
+          if (err) {
+            next(err);
+          } else if (user) {
+            res.redirect('/');
+          } else {
+            client.db().collection('users').insertOne({
+              username: req.body.username,
+              password: req.body.password
+            },
+            (err, data, next) => {
+              if (err) {
+                res.redirect('/');
+              } else {
+                next(null, user)
+              }
+            })
+          }
+        })
+      },
+      passport.authenticate('local', {failureRedirect: '/'}),
+      (req, res) => {
+        res.redirect('/profile');
+      }
+    )
+
+    app.use((req, res, next) => {
+      res.status(404)
+      .type('text')
+      .send('Not Found')
+    })
     
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
