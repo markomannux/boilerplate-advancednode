@@ -97,7 +97,7 @@ mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) 
               username: req.body.username,
               password: req.body.password
             },
-            (err, data, next) => {
+            (err, data) => {
               if (err) {
                 res.redirect('/');
               } else {
