@@ -6,9 +6,8 @@ const session = require('express-session');
 const express = require("express");
 const fccTesting = require("./freeCodeCamp/fcctesting.js");
 const mongo = require('mongodb').MongoClient;
-const ObjectID = require('mongodb').ObjectId;
-const LocalStrategy = require('passport-local');
-const bcrypt = require('bcrypt');
+const routes = require('./routes');
+const auth = require('./auth');
 
 const app = express();
 
@@ -25,104 +24,12 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-
-
 mongo.connect(process.env.DATABASE, { useUnifiedTopology: true }, (err, client) => {
   if (err) {
     console.log('Database error: ' + err);
   } else {
-    passport.serializeUser((user, done) => {
-      done(null, user._id);
-    })
-    passport.deserializeUser((id, done) => {
-      client.db().collection('users').findOne(
-      {_id: new ObjectID(id)},
-        (err, doc) => {
-          done(null, doc);
-        }
-      );
-    })
-    passport.use(new LocalStrategy(
-      function(username, password, done) {
-        client.db().collection('users').findOne({username: username}, function(err, user) {
-          console.log('User ' + username + ' attempted to log in.');
-          if (err) { return done(err);}
-          if (!user) { return done(null, false);}
-          if (!bcrypt.compareSync(password, user.password)) { return done(null, false);}
-          return done(null, user);
-        });
-      }
-    ))
-
-    function ensureAuthenticated(req, res, next) {
-      if (req.isAuthenticated()) {
-        return next();
-      }
-      res.redirect('/');
-    };
-    
-    app.route("/").get((req, res) => {
-      //Change the response to render the Pug template
-      res.render('pug/index',
-      {
-        title: 'Hello',
-        message: 'Please login',
-        showLogin: true,
-        showRegistration: true
-      });
-    });
-    
-    app.route('/login').post(
-      passport.authenticate('local', {failureRedirect: '/'}),
-      (req, res) => {
-        res.redirect('/profile');
-      });
-    
-    app.route('/profile').get(ensureAuthenticated, (req, res) => {
-      res.render('pug/profile', {username:req.user.username});
-    })
-
-    app.route('/register').post(
-      (req, res, next) => {
-        client.db().collection('users').findOne({username:req.body.username}, (err, user) => {
-          if (err) {
-            next(err);
-          } else if (user) {
-            res.redirect('/');
-          } else {
-            const hash = bcrypt.hashSync(req.body.password, 12);
-            client.db().collection('users').insertOne({
-              username: req.body.username,
-              password: hash
-            },
-            (err, data) => {
-              if (err) {
-                res.redirect('/');
-              } else {
-                next(null, user)
-              }
-            })
-          }
-        })
-      },
-      passport.authenticate('local', {failureRedirect: '/'}),
-      (req, res, next) => {
-        res.redirect('/profile');
-      }
-    )
-    
-    app.route('/logout')
-      .get((req, res) => {
-        req.logout();
-        res.redirect('/')
-    })
-
-    app.use((req, res, next) => {
-      res.status(404)
-      .type('text')
-      .send('Not Found')
-    })
-    
+    auth(app, client);
+    routes(app, client);
     app.listen(process.env.PORT || 3000, () => {
       console.log("Listening on port " + process.env.PORT);
     });
